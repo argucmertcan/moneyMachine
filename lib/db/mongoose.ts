@@ -1,4 +1,4 @@
-import mongoose, { type Mongoose } from 'mongoose';
+import mongoose from 'mongoose';
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
@@ -8,27 +8,19 @@ if (!MONGODB_URI) {
 
 declare global {
   // eslint-disable-next-line no-var
-  var mongooseCache: { conn: Mongoose | null; promise: Promise<Mongoose> | null } | undefined;
+  var mongooseConnection: ReturnType<typeof connectToDatabase> | undefined;
 }
 
-const cached = global.mongooseCache || { conn: null, promise: null };
-
-if (!global.mongooseCache) {
-  global.mongooseCache = cached;
-}
-
-export async function connectToDatabase(): Promise<Mongoose> {
-  if (cached.conn) {
-    return cached.conn;
+export async function connectToDatabase() {
+  if (global.mongooseConnection) {
+    return global.mongooseConnection;
   }
 
-  if (!cached.promise) {
-    cached.promise = mongoose.connect(MONGODB_URI, {
-      bufferCommands: false,
-      serverSelectionTimeoutMS: 5000
-    });
-  }
+  const connection = await mongoose.connect(MONGODB_URI, {
+    bufferCommands: false,
+    serverSelectionTimeoutMS: 5000
+  });
 
-  cached.conn = await cached.promise;
-  return cached.conn;
+  global.mongooseConnection = connection;
+  return connection;
 }
